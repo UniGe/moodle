@@ -44,11 +44,15 @@ class sync_task extends \core\task\scheduled_task {
      * Run users sync.
      */
     public function execute() {
-        global $CFG;
-        if (is_enabled_auth('cas')) {
-            $auth = get_auth_plugin('cas');
-            $auth->sync_users(true);
+        if (!is_enabled_auth('cas')) {
+            mtrace('auth_cas plugin is disabled, synchronisation stopped');
+            return;
         }
+
+        $auth = get_auth_plugin('cas');
+        $trace = new \text_progress_trace();
+        $update = true; // Should be configurable.
+        $auth->sync_users($trace, $update);
     }
 
 }

@@ -44,11 +44,15 @@ class sync_task extends \core\task\scheduled_task {
      * Run users sync.
      */
     public function execute() {
-        global $CFG;
-        if (is_enabled_auth('ldap')) {
-            $auth = get_auth_plugin('ldap');
-            $auth->sync_users(true);
+        if (!is_enabled_auth('ldap')) {
+            mtrace('auth_ldap plugin is disabled, synchronisation stopped');
+            return;
         }
+
+        $auth = get_auth_plugin('ldap');
+        $trace = new \text_progress_trace();
+        $update = true; // Could be configurable.
+        $auth->sync_users($trace, $update);
     }
 
 }

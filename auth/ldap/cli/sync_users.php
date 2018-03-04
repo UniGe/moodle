@@ -54,7 +54,7 @@ require_once($CFG->libdir.'/clilib.php');
 set_debugging(DEBUG_DEVELOPER, true);
 
 if (!is_enabled_auth('ldap')) {
-    error_log('[AUTH LDAP] '.get_string('pluginnotenabled', 'auth_ldap'));
+    mtrace('auth_ldap '.get_string('pluginnotenabled', 'auth_ldap'));
     die;
 }
 
@@ -67,5 +67,5 @@ if (!$taskdisabled->get_disabled()) {
 }
 
 $ldapauth = get_auth_plugin('ldap');
-$ldapauth->sync_users(true);
+$ldapauth->sync_users(new \text_progress_trace(), true);
 

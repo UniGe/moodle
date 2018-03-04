@@ -50,7 +50,7 @@ require_once($CFG->libdir.'/clilib.php');
 set_debugging(DEBUG_DEVELOPER, true);
 
 if (!is_enabled_auth('cas')) {
-    error_log('[AUTH CAS] '.get_string('pluginnotenabled', 'auth_ldap'));
+    mtrace('auth_cas '.get_string('pluginnotenabled', 'auth_ldap'));
     die;
 }
 
@@ -63,5 +63,5 @@ if (!$task->get_disabled()) {
 }
 
 $casauth = get_auth_plugin('cas');
-$casauth->sync_users(true);
+$casauth->sync_users(new \text_progress_trace(), true);
 

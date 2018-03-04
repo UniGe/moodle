@@ -134,10 +134,11 @@ class auth_ldap_plugin_testcase extends advanced_testcase {
 
         /** @var auth_plugin_ldap $auth */
         $auth = get_auth_plugin('ldap');
+        $trace = new null_progress_trace();
 
         ob_start();
         $sink = $this->redirectEvents();
-        $auth->sync_users(true);
+        $auth->sync_users($trace, true);
         $events = $sink->get_events();
         $sink->close();
         ob_end_clean();
@@ -167,7 +168,7 @@ class auth_ldap_plugin_testcase extends advanced_testcase {
 
         ob_start();
         $sink = $this->redirectEvents();
-        $auth->sync_users(true);
+        $auth->sync_users($trace, true);
         $events = $sink->get_events();
         $sink->close();
         ob_end_clean();
@@ -189,7 +190,7 @@ class auth_ldap_plugin_testcase extends advanced_testcase {
 
         ob_start();
         $sink = $this->redirectEvents();
-        $auth->sync_users(true);
+        $auth->sync_users($trace, true);
         $events = $sink->get_events();
         $sink->close();
         ob_end_clean();
@@ -210,7 +211,7 @@ class auth_ldap_plugin_testcase extends advanced_testcase {
 
         ob_start();
         $sink = $this->redirectEvents();
-        $auth->sync_users(true);
+        $auth->sync_users($trace, true);
         $events = $sink->get_events();
         $sink->close();
         ob_end_clean();
@@ -230,7 +231,7 @@ class auth_ldap_plugin_testcase extends advanced_testcase {
 
         ob_start();
         $sink = $this->redirectEvents();
-        $auth->sync_users(true);
+        $auth->sync_users($trace, true);
         $events = $sink->get_events();
         $sink->close();
         ob_end_clean();
@@ -255,7 +256,7 @@ class auth_ldap_plugin_testcase extends advanced_testcase {
 
         ob_start();
         $sink = $this->redirectEvents();
-        $auth->sync_users(true);
+        $auth->sync_users($trace, true);
         $events = $sink->get_events();
         $sink->close();
         ob_end_clean();
@@ -278,7 +279,7 @@ class auth_ldap_plugin_testcase extends advanced_testcase {
 
         ob_start();
         $sink = $this->redirectEvents();
-        $auth->sync_users(true);
+        $auth->sync_users($trace, true);
         $events = $sink->get_events();
         $sink->close();
         ob_end_clean();

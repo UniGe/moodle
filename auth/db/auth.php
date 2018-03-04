@@ -284,11 +284,10 @@ class auth_plugin_db extends auth_plugin_base {
      *
      * This implementation is simpler but less scalable than the one found in the LDAP module.
      *
-     * @param progress_trace $trace
-     * @param bool $do_updates  Optional: set to true to force an update of existing accounts
-     * @return int 0 means success, 1 means failure
+     * @param progress_trace $trace An object implementing the callback to show operation progress
+     * @param bool $doupdates  Optional: set to true to force an update of existing accounts
      */
-    function sync_users(progress_trace $trace, $do_updates=false) {
+    public function sync_users(progress_trace $trace, $doupdates=false) {
         global $CFG, $DB;
 
         require_once($CFG->dirroot . '/user/lib.php');
@@ -356,11 +355,11 @@ class auth_plugin_db extends auth_plugin_base {
         if (!count($userlist)) {
             // Exit right here, nothing else to do.
             $trace->finished();
-            return 0;
+            return;
         }
 
         // Update existing accounts.
-        if ($do_updates) {
+        if ($doupdates) {
             // Narrow down what fields we need to update.
             $all_keys = array_keys(get_object_vars($this->config));
             $updatekeys = array();
@@ -479,7 +478,6 @@ class auth_plugin_db extends auth_plugin_base {
             unset($add_users);
         }
         $trace->finished();
-        return 0;
     }
 
     function user_exists($username) {

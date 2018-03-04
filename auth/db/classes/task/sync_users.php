@@ -49,7 +49,7 @@ class sync_users extends \core\task\scheduled_task {
      */
     public function execute() {
         if (!is_enabled_auth('db')) {
-            mtrace('auth_db plugin is disabled, synchronisation stopped', 2);
+            mtrace('auth_db plugin is disabled, synchronisation stopped');
             return;
         }
 

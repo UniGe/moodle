@@ -312,20 +312,20 @@ class auth_plugin_cas extends auth_plugin_ldap {
     }
 
     /**
-     * Syncronizes users from LDAP server to moodle user table.
+     * Synchronizes users from the LDAP server to moodle user table.
      *
      * If no LDAP servers are configured, simply return. Otherwise,
      * call parent class method to do the work.
      *
-     * @param bool $do_updates will do pull in data updates from LDAP if relevant
-     * @return nothing
+     * @param mixed $trace an object extending the \progress_trace class
+     * @param bool $doupdates  Optional: set to true to force an update of existing accounts
      */
-    function sync_users($do_updates=true) {
+    public function sync_users($trace=true, $doupdates=true) {
         if (empty($this->config->host_url)) {
-            error_log('[AUTH CAS] '.get_string('noldapserver', 'auth_cas'));
+            mtrace('auth_cas '.get_string('noldapserver', 'auth_cas'));
             return;
         }
-        parent::sync_users($do_updates);
+        parent::sync_users($trace, $doupdates);
     }
 
     /**

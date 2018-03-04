@@ -99,6 +99,4 @@ $update = empty($options['noupdate']);
 
 /** @var auth_plugin_db $dbauth */
 $dbauth = get_auth_plugin('db');
-$result = $dbauth->sync_users($trace, $update);
-
-exit($result);
+$dbauth->sync_users($trace, $update);

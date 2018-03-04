@@ -658,21 +658,38 @@ class auth_plugin_ldap extends auth_plugin_base {
     }
 
     /**
-     * Syncronizes user fron external LDAP server to moodle user table
+     * Synchronizes user fron external LDAP server to moodle user table
      *
      * Sync is now using username attribute.
      *
      * Syncing users removes or suspends users that dont exists anymore in external LDAP.
      * Creates new users and updates coursecreator status of users.
      *
-     * @param bool $do_updates will do pull in data updates from LDAP if relevant
+     * To maintain compatibility with the previous version, the param $trace
+     * has not type declaration and accept a boolean which will replaces $doupdates
+     * with a warning.
+     *
+     * @param mixed $trace an object extending the \progress_trace class
+     * @param bool $doupdates  Optional: set to true to force an update of existing accounts
      */
-    function sync_users($do_updates=true) {
+    public function sync_users($trace=true, $doupdates=true) {
+        // Adapter for the old signature.
+        if (is_bool($trace)) {
+            $doupdates = $trace;
+            $trace = new \text_progress_trace();
+            debugging('The method sync_users() is invoked with the old signature, using text_progress_trace.',
+                DEBUG_DEVELOPER);
+        } else if (!is_a($trace, '\progress_trace')) {
+            $trace = new \text_progress_trace();
+            debugging('The trace object must be of type \progress_trace, using text_progress_trace.',
+                DEBUG_DEVELOPER);
+        }
+
         global $CFG, $DB;
 
         require_once($CFG->dirroot . '/user/profile/lib.php');
 
-        print_string('connectingldap', 'auth_ldap');
+        $trace->output(get_string('connectingldap', 'auth_ldap'));
         $ldapconnection = $this->ldap_connect();
 
         $dbman = $DB->get_manager();
@@ -685,7 +702,7 @@ class auth_plugin_ldap extends auth_plugin_base {
         $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
         $table->add_index('username', XMLDB_INDEX_UNIQUE, array('mnethostid', 'username'));
 
-        print_string('creatingtemptable', 'auth_ldap', 'tmp_extuser');
+        $trace->output(get_string('creatingtemptable', 'auth_ldap', 'tmp_extuser'));
         $dbman->create_temp_table($table);
 
         ////
@@ -725,13 +742,18 @@ class auth_plugin_ldap extends auth_plugin_base {
                 if ($ldap_pagedresults) {
                     ldap_control_paged_result_response($ldapconnection, $ldap_result, $ldap_cookie);
                 }
+
+                $count = 0;
                 if ($entry = @ldap_first_entry($ldapconnection, $ldap_result)) {
                     do {
                         $value = ldap_get_values_len($ldapconnection, $entry, $this->config->user_attribute);
                         $value = core_text::convert($value[0], $this->config->ldapencoding, 'utf-8');
                         $value = trim($value);
                         $this->ldap_bulk_insert($value);
+                        // Provide a visual feedback.
+                        $count++;
                     } while ($entry = ldap_next_entry($ldapconnection, $entry));
+                    $trace->output(get_string('usersfound', 'bulkusers', $count), 1);
                 }
                 unset($ldap_result); // Free mem.
             } while ($ldap_pagedresults && $ldap_cookie !== null && $ldap_cookie != '');
@@ -749,10 +771,10 @@ class auth_plugin_ldap extends auth_plugin_base {
         /// so as to avoid mass deletion of users; which is hard to undo
         $count = $DB->count_records_sql('SELECT COUNT(username) AS count, 1 FROM {tmp_extuser}');
         if ($count < 1) {
-            print_string('didntgetusersfromldap', 'auth_ldap');
+            $trace->output(get_string('didntgetusersfromldap', 'auth_ldap'));
             exit;
         } else {
-            print_string('gotcountrecordsfromldap', 'auth_ldap', $count);
+            $trace->output(get_string('gotcountrecordsfromldap', 'auth_ldap', $count));
         }
 
 
@@ -770,16 +792,17 @@ class auth_plugin_ldap extends auth_plugin_base {
             $remove_users = $DB->get_records_sql($sql, array('auth'=>$this->authtype));
 
             if (!empty($remove_users)) {
-                print_string('userentriestoremove', 'auth_ldap', count($remove_users));
+                $trace->output(get_string('userentriestoremove', 'auth_ldap', count($remove_users)));
                 foreach ($remove_users as $user) {
                     if (delete_user($user)) {
-                        echo "\t"; print_string('auth_dbdeleteuser', 'auth_db', array('name'=>$user->username, 'id'=>$user->id)); echo "\n";
+                        $trace->output(get_string('auth_dbdeleteuser', 'auth_db',
+                                array('name' => $user->username, 'id' => $user->id)), 1);
                     } else {
-                        echo "\t"; print_string('auth_dbdeleteusererror', 'auth_db', $user->username); echo "\n";
+                        $trace->output(get_string('auth_dbdeleteusererror', 'auth_db', $user->username), 1);
                     }
                 }
             } else {
-                print_string('nouserentriestoremove', 'auth_ldap');
+                $trace->output(get_string('nouserentriestoremove', 'auth_ldap'));
             }
             unset($remove_users); // Free mem!
 
@@ -794,18 +817,19 @@ class auth_plugin_ldap extends auth_plugin_base {
             $remove_users = $DB->get_records_sql($sql, array('auth'=>$this->authtype));
 
             if (!empty($remove_users)) {
-                print_string('userentriestoremove', 'auth_ldap', count($remove_users));
+                $trace->output(get_string('userentriestoremove', 'auth_ldap', count($remove_users)));
 
                 foreach ($remove_users as $user) {
                     $updateuser = new stdClass();
                     $updateuser->id = $user->id;
                     $updateuser->suspended = 1;
                     user_update_user($updateuser, false);
-                    echo "\t"; print_string('auth_dbsuspenduser', 'auth_db', array('name'=>$user->username, 'id'=>$user->id)); echo "\n";
+                    $trace->output(get_string('auth_dbsuspenduser', 'auth_db',
+                            array('name' => $user->username, 'id' => $user->id)), 1);
                     \core\session\manager::kill_user_sessions($user->id);
                 }
             } else {
-                print_string('nouserentriestoremove', 'auth_ldap');
+                $trace->output(get_string('nouserentriestoremove', 'auth_ldap'));
             }
             unset($remove_users); // Free mem!
         }
@@ -820,7 +844,7 @@ class auth_plugin_ldap extends auth_plugin_base {
             $revive_users = $DB->get_records_sql($sql, array($this->authtype));
 
             if (!empty($revive_users)) {
-                print_string('userentriestorevive', 'auth_ldap', count($revive_users));
+                $trace->output(get_string('userentriestorevive', 'auth_ldap', count($revive_users)));
 
                 foreach ($revive_users as $user) {
                     $updateuser = new stdClass();
@@ -828,10 +852,11 @@ class auth_plugin_ldap extends auth_plugin_base {
                     $updateuser->auth = $this->authtype;
                     $updateuser->suspended = 0;
                     user_update_user($updateuser, false);
-                    echo "\t"; print_string('auth_dbreviveduser', 'auth_db', array('name'=>$user->username, 'id'=>$user->id)); echo "\n";
+                    $trace->output(get_string('auth_dbreviveduser', 'auth_db',
+                            array('name' => $user->username, 'id' => $user->id)), 1);
                 }
             } else {
-                print_string('nouserentriestorevive', 'auth_ldap');
+                $trace->output(get_string('nouserentriestorevive', 'auth_ldap'));
             }
 
             unset($revive_users);
@@ -839,33 +864,32 @@ class auth_plugin_ldap extends auth_plugin_base {
 
 
 /// User Updates - time-consuming (optional)
-        if ($do_updates) {
+        if ($doupdates) {
             // Narrow down what fields we need to update
             $updatekeys = $this->get_profile_keys();
 
         } else {
-            print_string('noupdatestobedone', 'auth_ldap');
+            $trace->output(get_string('noupdatestobedone', 'auth_ldap'));
         }
-        if ($do_updates and !empty($updatekeys)) { // run updates only if relevant
+        if ($doupdates and !empty($updatekeys)) { // Run updates only if relevant.
             $users = $DB->get_records_sql('SELECT u.username, u.id
                                              FROM {user} u
                                             WHERE u.deleted = 0 AND u.auth = ? AND u.mnethostid = ?',
                                           array($this->authtype, $CFG->mnet_localhost_id));
             if (!empty($users)) {
-                print_string('userentriestoupdate', 'auth_ldap', count($users));
+                $trace->output(get_string('userentriestoupdate', 'auth_ldap', count($users)));
 
                 $transaction = $DB->start_delegated_transaction();
                 $xcount = 0;
                 $maxxcount = 100;
 
                 foreach ($users as $user) {
-                    echo "\t"; print_string('auth_dbupdatinguser', 'auth_db', array('name'=>$user->username, 'id'=>$user->id));
                     $userinfo = $this->get_userinfo($user->username);
-                    if (!$this->update_user_record($user->username, $updatekeys, true,
-                            $this->is_user_suspended((object) $userinfo))) {
-                        echo ' - '.get_string('skipped');
-                    }
-                    echo "\n";
+                    $updated = $this->update_user_record($user->username, $updatekeys, true,
+                            $this->is_user_suspended((object) $userinfo));
+                    $trace->output(get_string('auth_dbupdatinguser', 'auth_db',
+                            array('name' => $user->username, 'id' => $user->id))
+                            . ($updated ? '' : ' - '.get_string('skipped')), 1);
                     $xcount++;
 
                     // Update system roles, if needed.
@@ -875,7 +899,7 @@ class auth_plugin_ldap extends auth_plugin_base {
                 unset($users); // free mem
             }
         } else { // end do updates
-            print_string('noupdatestobedone', 'auth_ldap');
+            $trace->output(get_string('noupdatestobedone', 'auth_ldap'));
         }
 
 /// User Additions
@@ -889,7 +913,7 @@ class auth_plugin_ldap extends auth_plugin_base {
         $add_users = $DB->get_records_sql($sql);
 
         if (!empty($add_users)) {
-            print_string('userentriestoadd', 'auth_ldap', count($add_users));
+            $trace->output(get_string('userentriestoadd', 'auth_ldap', count($add_users)));
 
             $transaction = $DB->start_delegated_transaction();
             foreach ($add_users as $user) {
@@ -917,7 +941,8 @@ class auth_plugin_ldap extends auth_plugin_base {
                 }
 
                 $id = user_create_user($user, false);
-                echo "\t"; print_string('auth_dbinsertuser', 'auth_db', array('name'=>$user->username, 'id'=>$id)); echo "\n";
+                $trace->output(get_string('auth_dbinsertuser', 'auth_db',
+                        array('name' => $user->username, 'id' => $id)), 1);
                 $euser = $DB->get_record('user', array('id' => $id));
 
                 if (!empty($this->config->forcechangepassword)) {
@@ -932,9 +957,9 @@ class auth_plugin_ldap extends auth_plugin_base {
 
             }
             $transaction->allow_commit();
-            unset($add_users); // free mem
+            unset($add_users); // Free mem.
         } else {
-            print_string('nouserstobeadded', 'auth_ldap');
+            $trace->output(get_string('nouserstobeadded', 'auth_ldap'));
         }
 
         $dbman->drop_table($table);
@@ -946,13 +971,12 @@ class auth_plugin_ldap extends auth_plugin_base {
     /**
      * Bulk insert in SQL's temp table
      */
-    function ldap_bulk_insert($username) {
+    private function ldap_bulk_insert($username) {
         global $DB, $CFG;
 
         $username = core_text::strtolower($username); // usernames are __always__ lowercase.
         $DB->insert_record_raw('tmp_extuser', array('username'=>$username,
                                                     'mnethostid'=>$CFG->mnet_localhost_id), false, true);
-        echo '.';
     }
 
     /**
