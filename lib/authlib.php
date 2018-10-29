@@ -640,6 +640,7 @@ class auth_plugin_base {
     protected function update_user_record($username, $updatekeys = false, $triggerevent = false, $suspenduser = false) {
         global $CFG, $DB;
 
+        require_once($CFG->dirroot.'/user/lib.php');
         require_once($CFG->dirroot.'/user/profile/lib.php');
 
         // Just in case check text case.
