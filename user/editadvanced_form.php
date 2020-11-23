@@ -145,6 +145,7 @@ class user_editadvanced_form extends moodleform {
         $mform->addElement('advcheckbox', 'preference_auth_forcepasswordchange', get_string('forcepasswordchange'));
         $mform->addHelpButton('preference_auth_forcepasswordchange', 'forcepasswordchange');
         $mform->disabledIf('preference_auth_forcepasswordchange', 'createpassword', 'checked');
+        $mform->hideIf('preference_auth_forcepasswordchange', 'auth', 'in', $cannotchangepass);
 
         // Shared fields.
         useredit_shared_definition($mform, $editoroptions, $filemanageroptions, $user);

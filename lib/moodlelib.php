@@ -2744,7 +2744,8 @@ function require_login($courseorid = null, $autologinguest = true, $cm = null, $
         } else if ($userauth->can_change_password()) {
             throw new moodle_exception('forcepasswordchangenotice');
         } else {
-            throw new moodle_exception('nopasswordchangeforced', 'auth');
+            // Incoherent data: a password change is forced but the auth plugin doesn't support it.
+            debugging('user '.$USER->id.' belongs to the plugin '.$userauth->authtype.' and cannot change password');
         }
     }
 
@@ -4709,7 +4710,8 @@ function complete_user_login($user) {
                 redirect($CFG->wwwroot.'/login/change_password.php');
             }
         } else {
-            print_error('nopasswordchangeforced', 'auth');
+            // Incoherent data: a password change is forced but the auth plugin doesn't support it.
+            debugging('user '.$USER->id.' belongs to the plugin '.$userauth->authtype.' and cannot change password');
         }
     }
     return $USER;
